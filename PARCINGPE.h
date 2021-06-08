@@ -8,29 +8,32 @@ public:
 	PARCINGPE(LPCSTR PATH);	
 	~PARCINGPE();
 
-	bool Parcing();
-	LPVOID GetPointerOfFile();
-	PIMAGE_DOS_HEADER GetPointerDosHeader();
-	PIMAGE_NT_HEADERS64 GetPointerNtHeader();
-	BYTE*  GetPointerSectionsHeaders();
-
 	void PrintDosHeader();
 	void PrintNtHeader();
-private:
-	LPVOID m_pMapFile;
-	BYTE* m_pSectionsHeaders;
+	void PrintSectionHeader();
+	void PrintImportDirectory();
 
+private:
+	//Указатель на начало файла
+	LPVOID m_pMapFile;
+	//Смещение до заголовков секций 
+	BYTE* m_pSectionsHeaders;
+	//Указатель на DOS - заголовок
 	PIMAGE_DOS_HEADER m_pDosHeader;
+	//Указатель на PE - заголовок
 	PIMAGE_NT_HEADERS64 m_pNtHeader;
 
+	//Вектор указателей на секции, соответствующие директориям
+	std::vector<PIMAGE_SECTION_HEADER> m_vectorOfPointersToSections;
+	//Вектор смещений от начала файла до директорий 
+	std::vector<BYTE*> m_vectorOfRAWToSections;
 
-
-	std::vector<PIMAGE_SECTION_HEADER> vectorOfPointersToSections;
-	std::vector<BYTE*> vectorOfRAWToSections;
-	void CreatePointerDosHeader();
-	void CreatePointerNtHeader();
-	void CreatePointerSectionsHeaders();
-	void CreateRWAOfDirectories();
-	void CreateVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector);
+	//Функция парснига PE - файла
+	void Parcing();
+	void GetPointerDosHeader();
+	void GetPointerNtHeader();
+	void GetPointerSectionsHeaders();
+	void GetRWAOfDirectories();
+	void GetVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector);
 };
 
