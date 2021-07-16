@@ -12,7 +12,7 @@
 int main()
 {
 
-	PARCINGPE PE("D:\\FlashScan.exe");
+	PARCINGPE PE("D:\\sqlite3.dll");
 	
 	PE.PrintDosHeader();
 
@@ -20,5 +20,6 @@ int main()
 
 	PE.PrintSectionHeader();
 
-	PE.PrintImportDirectory();	
+	//PE.PrintImportDirectory();	
+	PE.PrintExportDirectory();
 }

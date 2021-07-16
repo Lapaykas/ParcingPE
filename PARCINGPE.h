@@ -11,7 +11,11 @@ public:
 	void PrintDosHeader();
 	void PrintNtHeader();
 	void PrintSectionHeader();
+
+
+	void PrintExportDirectory();
 	void PrintImportDirectory();
+
 
 private:
 	//Указатель на начало файла
@@ -27,7 +31,8 @@ private:
 	std::vector<PIMAGE_SECTION_HEADER> m_vectorOfPointersToSections;
 	//Вектор смещений от начала файла до директорий 
 	std::vector<BYTE*> m_vectorOfRAWToSections;
-
+	//Inline функция расчета смещения до нужно поля от начала файла
+	inline LPBYTE GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader, DWORD rva);
 	//Функция парснига PE - файла
 	void Parcing();
 	void GetPointerDosHeader();
