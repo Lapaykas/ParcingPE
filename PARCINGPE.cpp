@@ -43,7 +43,7 @@ PARCINGPE::~PARCINGPE()
 
 inline LPBYTE PARCINGPE::GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader,DWORD rva)
 {
-	return (BYTE*)m_pMapFile + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
+	return static_cast<BYTE*>(m_pMapFile) + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
 }
 
 void PARCINGPE::Parcing()
@@ -146,12 +146,12 @@ printf("\n******* NT HEADERS *******\n");
 
 void PARCINGPE::PrintSectionHeader()
 {
-	BYTE* startOfSections = m_pSectionsHeaders;
+	BYTE* pStartOfSections = m_pSectionsHeaders;
 	BYTE sectionSize = sizeof(IMAGE_SECTION_HEADER);
 	printf("\n******* SECTION HEADERS *******\n");
 	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++) 
 	{
-		PIMAGE_SECTION_HEADER sectionHeader = (PIMAGE_SECTION_HEADER)startOfSections;
+		PIMAGE_SECTION_HEADER sectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections);
 		printf("\t%s\n", sectionHeader->Name);
 		printf("\t\t0x%x\t\tVirtual Size\n", sectionHeader->Misc.VirtualSize);
 		printf("\t\t0x%x\t\tVirtual Address\n", sectionHeader->VirtualAddress);
@@ -162,41 +162,40 @@ void PARCINGPE::PrintSectionHeader()
 		printf("\t\t0x%x\t\tNumber Of Relocations\n", sectionHeader->NumberOfRelocations);
 		printf("\t\t0x%x\t\tNumber Of Line Numbers\n", sectionHeader->NumberOfLinenumbers);
 		printf("\t\t0x%x\tCharacteristics\n", sectionHeader->Characteristics);		
-		startOfSections += sectionSize;
+		pStartOfSections += sectionSize;
 	}
 }
 
 void PARCINGPE::PrintExportDirectory()
-{
+{	
+	PIMAGE_SECTION_HEADER pExportSection = m_vectorOfPointersToSections[0];
+	PIMAGE_EXPORT_DIRECTORY pExportDirectory = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(m_vectorOfRAWToSections[0]);
+	LPDWORD pNameTable = (LPDWORD)GetOffsetToDataFromFile(pExportSection, pExportDirectory->AddressOfNames);
 	printf("\n******* DLL EXPORTS *******\n");
-	//BYTE* offsetToExportSection = (BYTE*)m_pMapFile + m_vectorOfPointersToSections[1]->PointerToRawData;
-	PIMAGE_EXPORT_DIRECTORY exportDescriptor = (PIMAGE_EXPORT_DIRECTORY)m_vectorOfRAWToSections[0];
-	LPDWORD arrayOfNames = (LPDWORD)GetOffsetToDataFromFile(m_vectorOfPointersToSections[0], exportDescriptor->AddressOfNames);
-	printf("\t%s\n", (char*)(GetOffsetToDataFromFile(m_vectorOfPointersToSections[0],exportDescriptor->Name)));
-	for (UINT j = 0; j < exportDescriptor->NumberOfNames; j++) {
+	printf("%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pExportSection,pExportDirectory->Name)));
+	for (UINT i = 0; i < pExportDirectory->NumberOfNames; i++) {
 	
-		printf("\t%s\n", (char*)GetOffsetToDataFromFile(m_vectorOfPointersToSections[0], arrayOfNames[j]));
+		printf("\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pExportSection, pNameTable[i])));
 	}
   }
 
 void PARCINGPE::PrintImportDirectory()
 {
-	PIMAGE_THUNK_DATA thunkData = {};
-	BYTE* offsetToImportSection = (BYTE*)m_pMapFile + m_vectorOfPointersToSections[1]->PointerToRawData;
-	printf("\n******* DLL IMPORTS *******\n");	PIMAGE_IMPORT_DESCRIPTOR importDescriptor = (PIMAGE_IMPORT_DESCRIPTOR)m_vectorOfRAWToSections[1];
-	for (; importDescriptor->Name != 0; importDescriptor++)
+	PIMAGE_SECTION_HEADER pImportSection = m_vectorOfPointersToSections[1];
+	printf("\n******* DLL IMPORTS *******\n");	PIMAGE_IMPORT_DESCRIPTOR pImportDirectory = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(m_vectorOfRAWToSections[1]);
+	for (; pImportDirectory->Name != 0; pImportDirectory++)
 	{
-		printf("\t%s\n", offsetToImportSection + (importDescriptor->Name - m_vectorOfPointersToSections[1]->VirtualAddress));
-		ULONGLONG thunk = importDescriptor->OriginalFirstThunk == 0 ? importDescriptor->FirstThunk : importDescriptor->OriginalFirstThunk;
-		thunkData = (PIMAGE_THUNK_DATA)(offsetToImportSection + (thunk - m_vectorOfPointersToSections[1]->VirtualAddress));
-
+		printf("\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, pImportDirectory->Name)));
+		ULONGLONG thunk = pImportDirectory->OriginalFirstThunk == 0 ? pImportDirectory->FirstThunk : pImportDirectory->OriginalFirstThunk;
+		PIMAGE_THUNK_DATA thunkData = reinterpret_cast<PIMAGE_THUNK_DATA>(GetOffsetToDataFromFile(pImportSection, thunk));
 		for (; thunkData->u1.AddressOfData != 0; thunkData++)
 		{
-			printf("\t\t%s\n", (offsetToImportSection + (thunkData->u1.AddressOfData - m_vectorOfPointersToSections[1]->VirtualAddress + 2)));
+			printf("\t\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, thunkData->u1.AddressOfData+2)));
 		}
 	}
 }
 //TODO: m_vectorOfPointersToSections[1] скопировать в нормальную переменную
+//сделал, нормально?
 
 void PARCINGPE::GetPointerDosHeader()
 {
@@ -207,6 +206,7 @@ void PARCINGPE::GetPointerNtHeader()
 {
 	m_pNtHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((BYTE*)m_pMapFile + m_pDosHeader->e_lfanew);
 	//TODO: организовать проверки на не выход за границу файла
+	//Помню, но еще не дошел до этого
 }
 
 void PARCINGPE::GetPointerSectionsHeaders()
@@ -216,21 +216,24 @@ void PARCINGPE::GetPointerSectionsHeaders()
 
 void PARCINGPE::GetRWAOfDirectories()
 {
-	BYTE* startOfSections = m_pSectionsHeaders;
+	BYTE* pStartOfSections = m_pSectionsHeaders;
 	constexpr BYTE sectionSize = sizeof(IMAGE_SECTION_HEADER);
 	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++)
 	{
-		PIMAGE_SECTION_HEADER sectionHeader = (PIMAGE_SECTION_HEADER)startOfSections;
+		PIMAGE_SECTION_HEADER sectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections);
+		DWORD sectionStart = sectionHeader->VirtualAddress;
+		DWORD sectionEnd = sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize;
 		for (int j = 0; j < 15; j++)
 		{
 			DWORD directoryRVA = m_pNtHeader->OptionalHeader.DataDirectory[j].VirtualAddress;
-			if (directoryRVA >= sectionHeader->VirtualAddress && directoryRVA < sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize)
+			if (directoryRVA >= sectionStart && directoryRVA < sectionEnd)
 			{
 				//TODO: сделать человеческое условие
+				//Такое условие выглядит по человечески?
 				m_vectorOfPointersToSections[j] = sectionHeader;
 			}
 		}
-		startOfSections += sectionSize;
+		pStartOfSections += sectionSize;
 	}
 	GetVectorOfRWA(m_vectorOfPointersToSections);
 }
@@ -245,7 +248,7 @@ void PARCINGPE::GetVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector)
 		}
 		else
 		{
-			m_vectorOfRAWToSections[i] = (BYTE*)m_pMapFile + argVector[i]->PointerToRawData +
+			m_vectorOfRAWToSections[i] = static_cast<BYTE*>(m_pMapFile) + argVector[i]->PointerToRawData +
 				m_pNtHeader->OptionalHeader.DataDirectory[i].VirtualAddress - argVector[i]->VirtualAddress;
 		}
 	}

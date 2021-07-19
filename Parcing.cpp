@@ -20,6 +20,6 @@ int main()
 
 	PE.PrintSectionHeader();
 
-	//PE.PrintImportDirectory();	
+	PE.PrintImportDirectory();	
 	PE.PrintExportDirectory();
 }
