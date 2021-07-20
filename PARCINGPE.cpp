@@ -194,7 +194,7 @@ void PARCINGPE::PrintImportDirectory()
 		}
 	}
 }
-//TODO: m_vectorOfPointersToSections[1] скопировать в нормальную переменную
+//TODO: m_vectorOfPointersToSections[1] скопировать в нормальную переменную 
 //сделал, нормально?
 
 void PARCINGPE::GetPointerDosHeader()
