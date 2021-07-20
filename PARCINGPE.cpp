@@ -3,21 +3,22 @@
 
 #include "PARCINGPE.h"
 
+//Логично тут сделать шаблонную функцию AddToPtr, которая двигаети любой указательна смещение и возвращает указатель на что-то.
 
-
+//Что за имя класса из больших букв?!
 PARCINGPE::PARCINGPE(LPCSTR pathToPE) : m_pDosHeader(nullptr), m_pNtHeader(nullptr), m_pMapFile(nullptr), m_pSectionsHeaders(nullptr),
 							m_vectorOfPointersToSections(15, nullptr), m_vectorOfRAWToSections(15, nullptr)
 {
 	ATL::CHandle FileHandle(CreateFileA(pathToPE, FILE_GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
-	if (FileHandle == INVALID_HANDLE_VALUE && FileHandle==0)
+	if (FileHandle == INVALID_HANDLE_VALUE && FileHandle==0)//ошибка, никогда не сработает
 	{
-		printf("Could not read file. Error: %i", GetLastError());
+		printf("Could not read file. Error: %i", GetLastError()); //не правильный спецификатор
 		//здесь я планирую сделать throw
 	}
 	LARGE_INTEGER fileSize;
 	if (!GetFileSizeEx(FileHandle, &fileSize))
 	{
-		printf("Could not get size of file. Error: %i", GetLastError());
+		printf("Could not get size of file. Error: %i", GetLastError());//не правильный спецификатор
 	}
 
 	ATL::CHandle MapFileHandle(CreateFileMapping(FileHandle, nullptr, PAGE_READONLY, 0, 0, nullptr));
@@ -46,7 +47,7 @@ inline LPBYTE PARCINGPE::GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionH
 	return static_cast<BYTE*>(m_pMapFile) + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
 }
 
-void PARCINGPE::Parcing()
+void PARCINGPE::Parcing()//это процесс а не действие, переименовать
 {
 	GetPointerDosHeader();
 	GetPointerNtHeader();
@@ -182,7 +183,7 @@ void PARCINGPE::PrintExportDirectory()
 void PARCINGPE::PrintImportDirectory()
 {
 	PIMAGE_SECTION_HEADER pImportSection = m_vectorOfPointersToSections[1];
-	printf("\n******* DLL IMPORTS *******\n");	PIMAGE_IMPORT_DESCRIPTOR pImportDirectory = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(m_vectorOfRAWToSections[1]);
+	printf("\n******* DLL IMPORTS *******\n");	PIMAGE_IMPORT_DESCRIPTOR pImportDirectory = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(m_vectorOfRAWToSections[1]); //кто экономит строки?
 	for (; pImportDirectory->Name != 0; pImportDirectory++)
 	{
 		printf("\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, pImportDirectory->Name)));
@@ -216,20 +217,18 @@ void PARCINGPE::GetPointerSectionsHeaders()
 
 void PARCINGPE::GetRWAOfDirectories()
 {
-	BYTE* pStartOfSections = m_pSectionsHeaders;
+	BYTE* pStartOfSections = m_pSectionsHeaders; 
 	constexpr BYTE sectionSize = sizeof(IMAGE_SECTION_HEADER);
 	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		PIMAGE_SECTION_HEADER sectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections);
-		DWORD sectionStart = sectionHeader->VirtualAddress;
-		DWORD sectionEnd = sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize;
-		for (int j = 0; j < 15; j++)
+		DWORD sectionStart = sectionHeader->VirtualAddress;//проверки, потенциально разименование nullptr //конст
+		DWORD sectionEnd = sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize;//конст
+		for (int j = 0; j < 15; j++) //Кто такой 15?
 		{
-			DWORD directoryRVA = m_pNtHeader->OptionalHeader.DataDirectory[j].VirtualAddress;
+			DWORD directoryRVA = m_pNtHeader->OptionalHeader.DataDirectory[j].VirtualAddress; //конст
 			if (directoryRVA >= sectionStart && directoryRVA < sectionEnd)
 			{
-				//TODO: сделать человеческое условие
-				//Такое условие выглядит по человечески?
 				m_vectorOfPointersToSections[j] = sectionHeader;
 			}
 		}
@@ -242,12 +241,14 @@ void PARCINGPE::GetVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector)
 {
 	for (auto i=0ull; i< argVector.size(); i++)
 	{
+		// тут можн обойтись contionue и уменьшить число скобочек или тернарным оператором
 		if (argVector[i] == nullptr)
 		{
 			m_vectorOfRAWToSections[i] = nullptr;
 		}
 		else
 		{
+			//СОДОМИЯ! тут без бутылки не разберешься.
 			m_vectorOfRAWToSections[i] = static_cast<BYTE*>(m_pMapFile) + argVector[i]->PointerToRawData +
 				m_pNtHeader->OptionalHeader.DataDirectory[i].VirtualAddress - argVector[i]->VirtualAddress;
 		}
