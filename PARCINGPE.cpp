@@ -47,6 +47,8 @@ inline LPBYTE PARCINGPE::GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionH
 	return static_cast<BYTE*>(m_pMapFile) + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
 }
 
+
+המנשרדןרדםןזשרנ‎זמםדא8ר
 void PARCINGPE::Parcing()//‎עמ ןנמצוסס א םו הויסעגטו, ןונוטלוםמגאעü
 {
 	GetPointerDosHeader();
