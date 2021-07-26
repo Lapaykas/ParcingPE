@@ -1,17 +1,19 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+﻿// This is an open source non-commercial project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 
 #include "PARCINGPE.h"
 #include <string>
-//������� ��� ������� ��������� ������� AddToPtr, ������� �������� ����� ����������� �������� � ���������� ��������� �� ���-��. //�������(��������)
+//Логично тут сделать шаблонную функцию AddToPtr, которая двигаети любой указательна смещение и возвращает указатель на что-то. //добавил(исправил)
 
-//��� �� ��� ������ �� ������� ����?! //��������
+//Что за имя класса из больших букв?! 
+//исправил
+//хреново исправил, ParcingPeFile - это процесс. А не некая сущность
 ParcingPeFile::ParcingPeFile(LPCSTR pathToPE) : m_pDosHeader(nullptr), m_pNtHeader(nullptr), m_pMapFile(nullptr), m_pSectionsHeaders(nullptr),
 							m_vectorOfPointersToSections(IMAGE_NUMBEROF_DIRECTORY_ENTRIES, nullptr), 
 							m_vectorOfRAWToSections(IMAGE_NUMBEROF_DIRECTORY_ENTRIES, nullptr), sizeOfFile(0)
 {
 	ATL::CHandle FileHandle(CreateFileA(pathToPE, FILE_GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
-	if ((FileHandle == INVALID_HANDLE_VALUE) && (FileHandle==0))//������, ������� �� ��������� //��������
+	if ((FileHandle == INVALID_HANDLE_VALUE) && (FileHandle==0))//эта проверка все еще нихуя не работает! подумай как проверить!
 	{
 		ERRORINFO("Could not read file");
 	}
@@ -46,10 +48,11 @@ ParcingPeFile::~ParcingPeFile()
 
 inline LPBYTE ParcingPeFile::GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader,DWORD rva)
 {
+	//Где функция передвижения указателя?!
 	return static_cast<BYTE*>(m_pMapFile) + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
 }
 
-void ParcingPeFile::GetPointersToSectionsAndHeaders()//��� ������� � �� ��������, �������������
+void ParcingPeFile::GetPointersToSectionsAndHeaders()//это процесс а не действие, переименовать
 {
 	GetPointerDosHeader();
 	GetPointerNtHeader();
@@ -155,7 +158,7 @@ void ParcingPeFile::PrintSectionHeader()
 	printf("\n******* SECTION HEADERS *******\n");
 	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++) 
 	{
-		PIMAGE_SECTION_HEADER sectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections);
+		PIMAGE_SECTION_HEADER sectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections); //разъименование нулевого указателя
 		printf("\t%s\n", sectionHeader->Name);
 		printf("\t\t0x%x\t\tVirtual Size\n", sectionHeader->Misc.VirtualSize);
 		printf("\t\t0x%x\t\tVirtual Address\n", sectionHeader->VirtualAddress);
@@ -172,11 +175,36 @@ void ParcingPeFile::PrintSectionHeader()
 
 void ParcingPeFile::PrintExportDirectory()
 {	
-	PIMAGE_SECTION_HEADER pExportSection = m_vectorOfPointersToSections[0];
+	//хуйня какая-то.
+	/*  ⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⣀⣀⣀⠄⠄⠄⠄⡀⠄⠄⡀⠠⣤⣄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠈⠉⢉⡏⠄⠄⠄⢸⡇⠄⣼⠇⠄⢀⡏⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⣸⣧⡤⣤⡀⠈⠓⠚⣿⠄⠄⣸⠳⠶⢶⡀⠄⠄
+		⠄⠄⠄⠄⣀⡀⠄⠄⠄⠄⠄⠄⣿⠁⠄⣸⡇⣀⣠⡴⠟⠄⠄⣿⣀⣀⣼⠇⠄⠄
+		⠄⣠⣶⣿⣿⣿⣿⠆⠄⠄⠄⠄⠻⠦⠶⠋⠄⠉⠄⠄⠄⠄⠄⠉⠉⠉⠁⠄⠄⠄
+		⢰⣿⣿⡿⠛⠉⠉⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⢸⣿⣿⡇⠄⠄⠄⠄⠄⠄⠄⠄⠄⢀⣀⣠⣤⣀⣀⠄⠄⠄⠄⢀⣀⣀⣀⡀⠄⠄
+		⠄⢿⣿⣧⠄⠄⠄⠄⠄⠄⢀⣴⣿⣿⣿⣿⣿⣿⣿⣷⣄⠄⣼⣿⣿⣿⣿⣿⣦⠄
+		⠄⠘⣿⣿⣧⡀⠄⠄⠄⢠⣾⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⡀⠹⠿⠛⠉⢹⣿⣿⡄
+		⠄⠄⠈⢿⣿⣿⣄⠄⢠⣿⣿⣿⣇⣍⢹⣿⣯⣰⣼⣿⡿⠁⠄⠄⠄⢀⣾⣿⣿⠃
+		⠄⠄⠄⠈⢿⣿⣿⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠁⠄⠄⢀⣴⣾⣿⡿⠃⠄
+		⠄⠄⠄⠄⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣤⣶⣿⣿⣿⠟⠋⠄⠄⠄
+		⠄⠄⠄⠄⠄⠈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠉⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⢸⣿⣿⣿⣿⠋⠉⠉⠉⠘⣿⣿⣿⣿⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⢸⣿⣿⣿⡏⠄⠄⠄⠄⠄⢹⣿⣿⣿⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⢸⣿⣿⣿⡇⠄⠄⠄⠄⠄⠸⣿⣿⣿⡄⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⣿⣿⣿⣿⠄⠄⠄⠄⠄⠄⠄⣿⣿⣿⣷⠄⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⣿⣿⣿⡇⠄⠄⠄⠄⠄⠄⠄⢸⣿⣿⣿⡆⠄⠄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⢰⣿⣿⣿⣄⠄⠄⠄⠄⠄⠄⠄⠈⣿⣿⣿⣿⣶⡄⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠈⠻⣿⣿⡟⠄⠄⠄⠄⠄⠄⠄⠄⢿⣿⣿⣿⠿⠃⠄⠄⠄⠄⠄⠄
+		⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄*/
+
+	PIMAGE_SECTION_HEADER pExportSection = m_vectorOfPointersToSections[0]; //Магические числа!
 	PIMAGE_EXPORT_DIRECTORY pExportDirectory = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(m_vectorOfRAWToSections[0]);
-	LPDWORD pNameTable = (LPDWORD)GetOffsetToDataFromFile(pExportSection, pExportDirectory->AddressOfNames);
+	LPDWORD pNameTable = (LPDWORD)GetOffsetToDataFromFile(pExportSection, pExportDirectory->AddressOfNames);//reinterpret
 	printf("\n******* DLL EXPORTS *******\n");
-	printf("%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pExportSection,pExportDirectory->Name)));
+	printf("%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pExportSection,pExportDirectory->Name))); //функция не коррелирует со своим названием
 	for (UINT i = 0; i < pExportDirectory->NumberOfNames; i++) {
 	
 		printf("\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pExportSection, pNameTable[i])));
@@ -188,15 +216,15 @@ void ParcingPeFile::PrintImportDirectory()
 	PIMAGE_SECTION_HEADER pImportSection = m_vectorOfPointersToSections[1];
 	printf("\n******* DLL IMPORTS *******\n");	
 	PIMAGE_IMPORT_DESCRIPTOR pImportDirectory = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(m_vectorOfRAWToSections[1]);
-	for (; pImportDirectory->Name != 0; pImportDirectory++)
+	for (; pImportDirectory->Name != 0; pImportDirectory++) //разименование nullptr!
 	{
-		printf("\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, pImportDirectory->Name)));
+		printf("\t%s\n", pImportSection->Name); //можно и так
 		ULONGLONG thunk = pImportDirectory->OriginalFirstThunk == 0 ? pImportDirectory->FirstThunk : pImportDirectory->OriginalFirstThunk;
 		PIMAGE_THUNK_DATA thunkData = reinterpret_cast<PIMAGE_THUNK_DATA>(GetOffsetToDataFromFile(pImportSection, thunk));
 		for (; thunkData->u1.AddressOfData != 0; thunkData++)
 		{
-			printf("\t\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, thunkData->u1.AddressOfData+2)));
-		}
+			printf("\t\t%s\n", reinterpret_cast<char*>(GetOffsetToDataFromFile(pImportSection, thunkData->u1.AddressOfData+2))); //что за 2?
+		}//а еще тут падает на бинаре винрара. УПС.
 	}
 }
 
@@ -211,32 +239,33 @@ void ParcingPeFile::GetPointerNtHeader()
 {
 	CheckOutRangeOfFile(m_pDosHeader->e_lfanew);	
 	m_pNtHeader = GetOffsetFromFile<PIMAGE_NT_HEADERS64>(m_pDosHeader->e_lfanew);
-	//TODO: ������������ �������� �� �� ����� �� ������� �����	//��������
+	//TODO: организовать проверки на не выход за границу файла	//исправил
 }
 
 void ParcingPeFile::GetPointerSectionsHeaders()
 {
-	const size_t offset = static_cast<LONGLONG>(m_pDosHeader->e_lfanew) + sizeof(_IMAGE_NT_HEADERS64);
+	const size_t offset = static_cast<LONGLONG>(m_pDosHeader->e_lfanew) + sizeof(_IMAGE_NT_HEADERS64);//что за offset? до чего?
 	CheckOutRangeOfFile(offset);
 	m_pSectionsHeaders = GetOffsetFromFile<LPBYTE>(offset);
 }
 
 void ParcingPeFile::GetRWAOfDirectories()
 {
-	BYTE* pStartOfSections = m_pSectionsHeaders; 
+	BYTE* pStartOfSections = m_pSectionsHeaders; //некорректное имя, не соответствует назначению
 	if (pStartOfSections == nullptr)
 	{
-		ERRORINFO("No directrories in PE file");
+		ERRORINFO("No directrories in PE file"); //может ли быть такое в корректном exe?
 	}
-	constexpr BYTE sectionSize = sizeof(IMAGE_SECTION_HEADER);
-	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++)
+	constexpr BYTE sectionSize = sizeof(IMAGE_SECTION_HEADER); //имя не правильно
+	for (int i = 0; i < m_pNtHeader->FileHeader.NumberOfSections; i++) //signed/unsigned
 	{
 		PIMAGE_SECTION_HEADER pSectionHeader = reinterpret_cast<PIMAGE_SECTION_HEADER>(pStartOfSections);
-		const DWORD sectionStart = pSectionHeader->VirtualAddress;//��������, ������������ ������������� nullptr //����� //��������
-		const DWORD sectionEnd = pSectionHeader->VirtualAddress + pSectionHeader->Misc.VirtualSize;//����� //��������
-		for (int j = 0; j < IMAGE_NUMBEROF_DIRECTORY_ENTRIES; j++) //��� ����� 15?// ��������
+		const DWORD sectionStart = pSectionHeader->VirtualAddress;//проверки, потенциально разименование nullptr //конст //исправил
+		const DWORD sectionEnd = pSectionHeader->VirtualAddress + pSectionHeader->Misc.VirtualSize;//конст //исправил
+		//а надо ли вообще что-то делать, если начало и конец секции nullptr?
+		for (int j = 0; j < IMAGE_NUMBEROF_DIRECTORY_ENTRIES; j++) //Кто такой 15?// исправил
 		{
-			const DWORD directoryRVA = m_pNtHeader->OptionalHeader.DataDirectory[j].VirtualAddress; //����� //��������
+			const DWORD directoryRVA = m_pNtHeader->OptionalHeader.DataDirectory[j].VirtualAddress; //Это точно Relative адрес?
 			if (directoryRVA >= sectionStart && directoryRVA < sectionEnd)
 			{
 				m_vectorOfPointersToSections[j] = pSectionHeader;
@@ -251,14 +280,15 @@ void ParcingPeFile::GetVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector
 {
 	for (auto i=0ull; i< argVector.size(); i++)
 	{
-		// ��� ���� �������� contionue � ��������� ����� �������� ��� ��������� ���������� // ��������
+		// тут можн обойтись contionue и уменьшить число скобочек или тернарным оператором // исправил
 		if (argVector[i] == nullptr)
 		{
 			continue;
 		}		
-		//�������! ��� ��� ������� �� �����������. //������� �����, ��� ������ �� �����
-		LPBYTE pFirstPageCOFFFile = MovePointer(static_cast<LPBYTE>(m_pMapFile), argVector[i]->PointerToRawData);
-		LPBYTE pRAWtoSection = MovePointer(pFirstPageCOFFFile, m_pNtHeader->OptionalHeader.DataDirectory[i].VirtualAddress - argVector[i]->VirtualAddress);
+		//pFirstPageCOFFFile - что это такое и почему в каждой итерации оно называется первый!
+		LPBYTE pFirstPageCOFFFile = MovePointer(static_cast<LPBYTE>(m_pMapFile), argVector[i]->PointerToRawData); //А нахрена писать функцию, что бы потом все равно кастить указатель???
+		auto _4to_za_hernia = m_pNtHeader->OptionalHeader.DataDirectory[i].VirtualAddress - argVector[i]->VirtualAddress; //!!!!!!
+		LPBYTE pRAWtoSection = MovePointer(pFirstPageCOFFFile, _4to_za_hernia);
 		m_vectorOfRAWToSections[i] = pRAWtoSection;		
 	}
 }

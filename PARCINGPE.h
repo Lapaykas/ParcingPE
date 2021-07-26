@@ -18,7 +18,7 @@ public:
 	void PrintImportDirectory();
 
 
-private:
+private://смешал все в кучу. И функции и переменные
 	//Указатель на начало файла
 	LPVOID m_pMapFile;
 	//Размер файла
@@ -54,16 +54,16 @@ private:
 };
 
 template<typename T>
-T ParcingPeFile::GetOffsetFromFile(size_t moveDistance) const noexcept
+T ParcingPeFile::GetOffsetFromFile(size_t moveDistance) const noexcept //Почему от файла? И главное, смещение ли это?
 {
 	return reinterpret_cast<T>(static_cast<LPBYTE>(m_pMapFile) + moveDistance);
 }
 
 template<typename T>
- void ParcingPeFile::CheckOutRangeOfFile(const T offset) const
+ void ParcingPeFile::CheckOutRangeOfFile(const T offset) const //плохое имя
 {
 	 if (static_cast<size_t>(offset) > sizeOfFile)
 	 {
-		 ERRORINFO(" File out of bounds");
+		 ERRORINFO(" File out of bounds"); //Файл все границ? ЗБС
 	 }
 }

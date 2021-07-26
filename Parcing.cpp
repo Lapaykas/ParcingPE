@@ -12,7 +12,7 @@
 int main()
 {
 	try {
-		ParcingPeFile PE("D:\\sqlite3.dll");
+		ParcingPeFile PE("C:\\Program Files\\WinRAR\\WinRar.exe");
 
 		PE.PrintDosHeader();
 
