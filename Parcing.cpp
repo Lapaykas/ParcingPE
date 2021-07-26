@@ -11,15 +11,20 @@
 
 int main()
 {
+	try {
+		ParcingPeFile PE("D:\\sqlite3.dll");
 
-	PARCINGPE PE("D:\\sqlite3.dll");
-	
-	PE.PrintDosHeader();
+		PE.PrintDosHeader();
 
-	PE.PrintNtHeader();
+		PE.PrintNtHeader();
 
-	PE.PrintSectionHeader();
+		PE.PrintSectionHeader();
 
-	PE.PrintImportDirectory();	
-	PE.PrintExportDirectory();
+		PE.PrintImportDirectory();
+		PE.PrintExportDirectory();
+	}
+	catch (const std::exception &e)
+	{
+		std::cout << e.what() << std::endl;
+	}
 }

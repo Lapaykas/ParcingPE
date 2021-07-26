@@ -214,6 +214,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="PARCINGPE.h" />
   </ItemGroup>
   <ItemGroup>

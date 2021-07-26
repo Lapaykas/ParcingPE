@@ -2,11 +2,12 @@
 #include <windows.h>
 #include "atlbase.h"
 #include <vector>
-class PARCINGPE
+#include "Common.h"
+class ParcingPeFile
 {
 public:
-	PARCINGPE(LPCSTR PATH);	
-	~PARCINGPE();
+	ParcingPeFile(LPCSTR PATH);	
+	~ParcingPeFile();
 
 	void PrintDosHeader();
 	void PrintNtHeader();
@@ -20,12 +21,22 @@ public:
 private:
 	//Указатель на начало файла
 	LPVOID m_pMapFile;
+	//Размер файла
+	LONGLONG sizeOfFile;
 	//Смещение до заголовков секций 
-	BYTE* m_pSectionsHeaders;
+	LPBYTE m_pSectionsHeaders;
 	//Указатель на DOS - заголовок
 	PIMAGE_DOS_HEADER m_pDosHeader;
 	//Указатель на PE - заголовок
 	PIMAGE_NT_HEADERS64 m_pNtHeader;
+
+	//вспомогательные функции
+	//шаблонная функция получения смещения от начала файла
+	template <typename T>
+	T GetOffsetFromFile(size_t moveDistance) const noexcept;
+	//шаблонная функция для проверки на выход за границу файла
+	template <typename T>
+	void CheckOutRangeOfFile(const T offset) const;
 
 	//Вектор указателей на секции, соответствующие директориям
 	std::vector<PIMAGE_SECTION_HEADER> m_vectorOfPointersToSections;
@@ -34,7 +45,7 @@ private:
 	//Inline функция расчета смещения до нужно поля от начала файла
 	inline LPBYTE GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader, DWORD rva);
 	//Функция парснига PE - файла
-	void Parcing();
+	void GetPointersToSectionsAndHeaders();
 	void GetPointerDosHeader();
 	void GetPointerNtHeader();
 	void GetPointerSectionsHeaders();
@@ -42,3 +53,17 @@ private:
 	void GetVectorOfRWA(std::vector<PIMAGE_SECTION_HEADER>& argVector);
 };
 
+template<typename T>
+T ParcingPeFile::GetOffsetFromFile(size_t moveDistance) const noexcept
+{
+	return reinterpret_cast<T>(static_cast<LPBYTE>(m_pMapFile) + moveDistance);
+}
+
+template<typename T>
+ void ParcingPeFile::CheckOutRangeOfFile(const T offset) const
+{
+	 if (static_cast<size_t>(offset) > sizeOfFile)
+	 {
+		 ERRORINFO(" File out of bounds");
+	 }
+}
