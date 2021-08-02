@@ -46,13 +46,9 @@ ParcingPeFile::~ParcingPeFile()
 }
 
 
-inline LPBYTE ParcingPeFile::GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader,DWORD rva)
-{
-	//Где функция передвижения указателя?!
-	return static_cast<BYTE*>(m_pMapFile) + pSectionHeader->PointerToRawData + (rva - pSectionHeader->VirtualAddress);
-}
 
-void ParcingPeFile::GetPointersToSectionsAndHeaders()//это процесс а не действие, переименовать
+
+void ParcingPeFile::GetPointersToSectionsAndHeaders()
 {
 	GetPointerDosHeader();
 	GetPointerNtHeader();

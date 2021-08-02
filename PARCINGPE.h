@@ -42,8 +42,6 @@ private://смешал все в кучу. И функции и переменные
 	std::vector<PIMAGE_SECTION_HEADER> m_vectorOfPointersToSections;
 	//Вектор смещений от начала файла до директорий 
 	std::vector<BYTE*> m_vectorOfRAWToSections;
-	//Inline функция расчета смещения до нужно поля от начала файла
-	inline LPBYTE GetOffsetToDataFromFile(PIMAGE_SECTION_HEADER pSectionHeader, DWORD rva);
 	//Функция парснига PE - файла
 	void GetPointersToSectionsAndHeaders();
 	void GetPointerDosHeader();
